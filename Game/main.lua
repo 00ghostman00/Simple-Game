@@ -1,4 +1,5 @@
 function love.load()
+    require"/collengine"
     --love.window.maximize()
     love.window.setMode(1200, 900)
     love.window.setTitle("Really cool game")
@@ -17,20 +18,17 @@ function love.load()
     player = {}
     player.x = love.graphics.getWidth()/2
     player.y = love.graphics.getHeight()/2
-    player.hity = false
-    player.hitx = false
+    player.sizeX = 43
+    player.sizeY = 43
     player.speed = 220
     player.action = false
     player.magazine = 7
     player.ammo = 10
     player.actionbuild = false
 
-    Boxes = {}
+    collisionsObjects = {}
     Bullets = {}
     AmmoBoxes = {}
-
-    SetUpBox(0, 0)
-    SetUpBox(100, 100)
 end
 
 --hold a gun
@@ -57,23 +55,23 @@ end
 
 function love.mousepressed(x, y, button)
     if button == 1 and player.action == true and player.magazine > 0 then SpawnBullet() end
-    if button == 1 and player.actionbuild == true then SpawnBox() end
+    if button == 1 and player.actionbuild == true then CollEngine.SpawnObject(x, y, true) end
 end
+
 function love.update(dt)
-    player.hitx = player.x - imgs.player:getWidth()/1.5
-    player.hity = player.y - imgs.player:getHeight()/1.5
+    love.window.setTitle("FPS: "..love.timer.getFPS())
 
     --WASD movement
-    if love.keyboard.isDown("w") and CheckCollisons("w") == true then
-            player.y = player.y - player.speed * dt
+    if love.keyboard.isDown("w") and CollEngine.CheckCollisons("w", dt) then
+        player.y = player.y - player.speed*dt
     end
-    if love.keyboard.isDown("a") then
+    if love.keyboard.isDown("a") and CollEngine.CheckCollisons("a", dt) then
         player.x = player.x - player.speed*dt
     end
-    if love.keyboard.isDown("s") then
+    if love.keyboard.isDown("s") and CollEngine.CheckCollisons("s", dt) then
         player.y = player.y + player.speed*dt
     end
-    if love.keyboard.isDown("d") then
+    if love.keyboard.isDown("d") and CollEngine.CheckCollisons("d", dt) then
         player.x = player.x + player.speed*dt
     end
 
@@ -83,6 +81,7 @@ function love.update(dt)
     else
         player.speed = 220
     end
+
     for i, bull in ipairs(Bullets) do
         bull.x = bull.x + math.cos(bull.rot) *bull.speed*dt
         bull.y = bull.y + math.sin(bull.rot) *bull.speed*dt
@@ -109,11 +108,8 @@ function love.draw()
         end
     end
 
-    for i, bb in ipairs(Boxes) do
-        love.graphics.rectangle("fill", bb.x, bb.y, 300*0.25, 300*0.25)
+    for i, bb in ipairs(collisionsObjects) do
         love.graphics.draw(imgs.box, bb.x, bb.y, nil, 0.25, 0.25)
-        love.graphics.print(bb.x, 0, 100)
-        love.graphics.print(bb.y, 50, 100)
     end
 
     --Draw gun
@@ -121,11 +117,12 @@ function love.draw()
         love.graphics.draw(imgs.handgun, player.x, player.y, GetMouseAngel(), 0.15, 0.15, imgs.player:getWidth()/2-100, imgs.player:getHeight()/2-50)
     end
     if player.actionbuild == true then
+        love.graphics.setColor(255, 255, 255, 0.5)
         love.graphics.draw(imgs.box, love.mouse.getX()-300*0.25/2, love.mouse.getY()-300*0.25/2, nil, 0.25, 0.25)
+        love.graphics.setColor(255, 255, 255, 1)
         love.graphics.draw(imgs.box, player.x, player.y, GetMouseAngel(), 0.15, 0.15, imgs.player:getWidth()/2-100, imgs.player:getHeight()/2-50)
     end
     --Draw player
-    love.graphics.rectangle("line", player.hitx, player.hity, imgs.player:getWidth()*1.5, imgs.player:getWidth()*1.5)
     love.graphics.draw(imgs.player, player.x, player.y, GetMouseAngel(), 1.5, 1.5, imgs.player:getWidth()/2, imgs.player:getHeight()/2)
 
     love.graphics.print(player.magazine .. "/7 <>".. player.ammo, 0, 0)
@@ -168,33 +165,3 @@ function ReloadAmmo()
     end
 end
 
-function SpawnBox()
-    local box = {}
-    box.x = love.mouse.getX()-300*0.5*0.25
-    box.y = love.mouse.getY()-300*0.5*0.25
-    
-    table.insert(Boxes, box)
-end
-
-function CheckCollisons(key)
-    local ended = false
-    if key == "w" then
-        for i, b in ipairs(Boxes) do
-            if player.hitx + imgs.player:getWidth()*1.5  >= b.x and player.hitx < b.x + 300*0.25 and player.hity >= b.y and player.hity < b.y + 300*0.25 and ended == false then
-                print("W NOT pressed")
-                ended = true
-                return false
-            elseif ended == false then
-                print("W pressed")
-                return true
-            end
-        end
-    end
-end
-
-function SetUpBox(t, e)
-    local box = {}
-    box.x = t
-    box.y = e
-    table.insert(Boxes, box)
-end
